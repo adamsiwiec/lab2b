@@ -6,12 +6,30 @@ import random
 import time
 import requests
 
+# city IDs: 
+# Rogers: 4128894
+# Stanford: 5398563
+# Warsaw: 756135
+
+def getTemps():
+    r = requests.get("https://api.openweathermap.org/data/2.5/group",
+                     params={"id": "4128894,5398563,756135", "appid": "75efdcce6cdbeb47416583ae730fd24b", "units": "imperial"})
+    temps = list(map(lambda city: round(city['main']['temp']),r.json()['list']))
+    return temps
+
+
 def write(ser, data):
     ser.write(data.encode('ascii'))
     ser.flush()
 
 def read(ser):
-    return ser.readline().decode("utf-8")
+    data = ser.readline().decode("utf-8").rstrip()
+    jsondata = json.loads(data)
+
+    if jsondata['op'] == 'gettemps':
+        res = {'op': 'sendtemps', 'temps': getTemps()}
+        write(json.dumps(res))
+    return 
 
 
 
@@ -47,19 +65,10 @@ if __name__ == "__main__":
     waitForSetup(ser)
     print("setup")
     while True:
-        data = {}
-        data["op"] = random.randint(0,98)
-
-        print("writing " + str(data["op"]))
-        data = json.dumps(data)
-        r = requests.get("https://api.openweathermap.org/data/2.5/weather",
-                     params={"q": "Rogers", "appid": "75efdcce6cdbeb47416583ae730fd24b", "units": "imperial"})
-        res = r.json()['main']
-        res['temp'] = round(res['temp'])
-        write(ser, json.dumps(res))
-        time.sleep(5)
-        # print("reading")
-        # print(read(ser))
+        time.sleep(0.05)
+        if ser.is_waiting:
+            print("reading")
+            print(read(ser))
 
 
 

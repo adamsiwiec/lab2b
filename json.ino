@@ -1,34 +1,51 @@
-#include<ArduinoJson.h>
+#include <ArduinoJson.h>
 
 const byte ANODE_PINS[8] = {13, 12, 11, 10, 9, 8, 7, 6};
-                           // {6, 7, 8, 9, 10, 11, 12, 13}
+// {6, 7, 8, 9, 10, 11, 12, 13}
 const byte CATHODE_PINS[8] = {2, 3, 4, 5, A0, A1, A2, A3};
-                             // {A3, A2, A1, A0, 5, 4, 3, 2}
-void setup() {
+// {A3, A2, A1, A0, 5, 4, 3, 2}
+int temps [3];
+
+int state = 0;
+
+void getTemps() {
+  StaticJsonDocument<200> doc;
+  doc["op"] = "gettemps";
+  serializeJson(temps, Serial);
+}
+void setup()
+{
   Serial.begin(115200);
 
   // initialize pins as output mode
-  for (byte i = 0; i < 8; i++) {
+  for (byte i = 0; i < 8; i++)
+  {
     pinMode(ANODE_PINS[i], OUTPUT);
     pinMode(CATHODE_PINS[i], OUTPUT);
   }
 
   // set pins as HIGH to make sure the circuit is off
-  for (byte i = 0; i < 8; i++) {
+  for (byte i = 0; i < 8; i++)
+  {
     digitalWrite(ANODE_PINS[i], HIGH);
     digitalWrite(CATHODE_PINS[i], HIGH);
   }
   Serial.println("Setup completed");
+  getTemps();
 }
 
-void display(byte pattern[8][8]) {
+void display(byte pattern[8][8])
+{
 
   // loop through all leds
-  for (byte x = 0; x < 8; x++) {
-    for (byte y = 0; y < 8; y++) {
+  for (byte x = 0; x < 8; x++)
+  {
+    for (byte y = 0; y < 8; y++)
+    {
 
       // if LED is enabled, turn on cathode
-      if (pattern[y][x]) digitalWrite(CATHODE_PINS[y], LOW);
+      if (pattern[y][x])
+        digitalWrite(CATHODE_PINS[y], LOW);
     }
 
     // enable the LED row
@@ -36,11 +53,12 @@ void display(byte pattern[8][8]) {
     delay(1);
 
     // disable all LEDs on row
-    for (byte y = 0; y < 8; y++) {
-      if (pattern[y][x]) digitalWrite(CATHODE_PINS[y], HIGH);
+    for (byte y = 0; y < 8; y++)
+    {
+      if (pattern[y][x])
+        digitalWrite(CATHODE_PINS[y], HIGH);
     }
     digitalWrite(ANODE_PINS[x], HIGH);
-
   }
 }
 
@@ -122,11 +140,11 @@ void displayNumber(unsigned long number)
         {
           if (scrollCoord + j > 7 && scrollCoord + j < 4 * numDigit + 8)
           {
-            ledOn[7-j][i] = pattern[scrollCoord + j - 8][i - 1];
+            ledOn[7 - j][i] = pattern[scrollCoord + j - 8][i - 1];
           }
           else
           {
-            ledOn[7-j][i] = 0;
+            ledOn[7 - j][i] = 0;
           }
         }
       }
@@ -135,21 +153,30 @@ void displayNumber(unsigned long number)
   }
 }
 
-void loop() {
+void loop()
+{
   // put your main code here, to run repeatedly:
   StaticJsonDocument<400> doc;
 
-
-  if (Serial.available()) {
+  if (Serial.available())
+  {
     String str = Serial.readStringUntil('\n');
     DeserializationError error = deserializeJson(doc, str);
 
-    if (error) {
+    if (error)
+    {
       Serial.print(F("deserializeJson() failed: "));
       Serial.println(error.f_str());
       return;
     }
-    unsigned long op = doc["temp"];
+    String op = doc["op"];
+
+    if(op.compare("settemps")) {
+        temps[0] = doc["temps"][0];
+        temps[1] = doc["temps"][1];
+        temps[2] = doc["temps"][2];
+    }
+
     displayNumber(op);
   }
 }
